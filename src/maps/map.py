@@ -46,6 +46,9 @@ class Map:
         Return True if collide if rect param collide with self._collision_map
         Hint: use API colliderect and iterate each rectangle to check
         '''
+        for collision_rect in self._collision_map:
+            if rect.colliderect(collision_rect):
+                return True
         return False
         
     def check_teleport(self, pos: Position) -> Teleport | None:
@@ -53,6 +56,26 @@ class Map:
         Teleportation: Player can enter a building by walking into certain tiles defined inside saves/*.json, and the map will be changed
         Hint: Maybe there is an way to switch the map using something from src/core/managers/game_manager.py called switch_... 
         '''
+        for tp in self.teleporters:
+            # Bikin kotak/hitbox tile teleport (1 tile size)
+            tp_rect = pg.Rect(
+                tp.pos.x,
+                tp.pos.y,
+                GameSettings.TILE_SIZE,
+                GameSettings.TILE_SIZE
+            )
+
+            # Posisi player sebagai rect 1x1 (biar gampang cek overlap)
+            player_rect = pg.Rect(
+                pos.x,
+                pos.y,
+                GameSettings.TILE_SIZE,
+                GameSettings.TILE_SIZE
+            )
+
+            if tp_rect.colliderect(player_rect):
+                return tp
+            
         return None
 
     def _render_all_layers(self, target: pg.Surface) -> None:
@@ -85,7 +108,14 @@ class Map:
                         Append the collision rectangle to the rects[] array
                         Remember scale the rectangle with the TILE_SIZE from settings
                         '''
-                        pass
+                        rects.append(
+                        pg.Rect(
+                            x * GameSettings.TILE_SIZE,
+                            y * GameSettings.TILE_SIZE,
+                            GameSettings.TILE_SIZE,
+                            GameSettings.TILE_SIZE,
+                        )
+                    )
         return rects
 
     @classmethod

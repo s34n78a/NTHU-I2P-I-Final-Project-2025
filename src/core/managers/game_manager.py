@@ -32,6 +32,7 @@ class GameManager:
         from src.data.bag import Bag
         # Game Properties
         self.maps = maps
+        self.previous_map_key = None # Untuk nyimpen map sebelumnya pas teleport
         self.current_map_key = start_map
         self.player = player
         self.enemy_trainers = enemy_trainers
@@ -60,14 +61,17 @@ class GameManager:
         
         self.next_map = target
         self.should_change_scene = True
+        self.previous_map_key = self.current_map_key # Simpen map sebelumnya
             
     def try_switch_map(self) -> None:
         if self.should_change_scene:
             self.current_map_key = self.next_map
             self.next_map = ""
             self.should_change_scene = False
-            if self.player:
-                self.player.position = self.maps[self.current_map_key].spawn
+            
+            # Ini ngeset player position ke spawn point
+            #if self.player:
+            #    self.player.position = self.maps[self.current_map_key].spawn
             
     def check_collision(self, rect: pg.Rect) -> bool:
         if self.maps[self.current_map_key].check_collision(rect):

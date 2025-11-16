@@ -23,16 +23,21 @@ class Button(UIComponent):
         self.img_button_default = Sprite(img_path, (width, height))
         self.hitbox = pg.Rect(x, y, width, height)
         '''
-        [TODO HACKATHON 1]
+        [TODO HACKATHON 1] 
         Initialize the properties
         
         self.img_button_hover = ...
         self.img_button = ...       --> This is a reference for which image to render
         self.on_click = ...
         '''
+        self.img_button_hover = Sprite(img_hovered_path, (width, height))
+        self.img_button = self.img_button_default
+
+        self.on_click = on_click
 
     @override
     def update(self, dt: float) -> None:
+        mouse_pos = input_manager.mouse_pos
         '''
         [TODO HACKATHON 1]
         Check if the mouse cursor is colliding with the button, 
@@ -46,7 +51,16 @@ class Button(UIComponent):
         else:
             ...
         '''
-        pass
+        if self.hitbox.collidepoint(mouse_pos):
+            # berati hover
+            self.img_button = self.img_button_hover
+
+            # Detect click (1 = left mouse button)
+            if input_manager.mouse_pressed(1) and self.on_click is not None:
+                self.on_click()
+        else:
+            # ga hover
+            self.img_button = self.img_button_default
     
     @override
     def draw(self, screen: pg.Surface) -> None:
@@ -54,8 +68,7 @@ class Button(UIComponent):
         [TODO HACKATHON 1]
         You might want to change this too
         '''
-        _ = screen.blit(self.img_button_default.image, self.hitbox)
-
+        _ = screen.blit(self.img_button.image, self.hitbox)
 
 def main():
     import sys
