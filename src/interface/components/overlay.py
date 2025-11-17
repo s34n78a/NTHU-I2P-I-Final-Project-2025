@@ -1,3 +1,5 @@
+# checkpoint 2
+
 from __future__ import annotations
 import pygame as pg
 from typing import List
@@ -49,7 +51,7 @@ class OverlayPanel(UIComponent):
         dark.fill((0, 0, 0))
         screen.blit(dark, (0, 0))
 
-        # Draw overlay panel background image *on top of the dark*
+        # Gambar overlay panel background image *di atas dark*
         if self.background_image:
             screen.blit(self.background_image, (self.rect.x, self.rect.y))
 

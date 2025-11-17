@@ -23,37 +23,47 @@ class GameManager:
     # Changing Scene properties
     should_change_scene: bool
     next_map: str
-    
-    def __init__(self, maps: dict[str, Map], start_map: str, 
+
+    def __init__(self, maps: dict[str, Map], start_map: str,
                  player: Player | None,
-                 enemy_trainers: dict[str, list[EnemyTrainer]], 
+                 enemy_trainers: dict[str, list[EnemyTrainer]],
                  bag: Bag | None = None):
-                     
+        
         from src.data.bag import Bag
         # Game Properties
         self.maps = maps
-        self.previous_map_key = None # Untuk nyimpen map sebelumnya pas teleport
         self.current_map_key = start_map
+        self.previous_map_key = None # Untuk nyimpen map sebelumnya pas teleport [TO DO HACKATHON 6]
         self.player = player
         self.enemy_trainers = enemy_trainers
         self.bag = bag if bag is not None else Bag([], [])
-        
+
+        # buat debugging
+        #print("Loaded map keys:", list(self.maps.keys()))
+
         # Check If you should change scene
         self.should_change_scene = False
         self.next_map = ""
-        
+
+        # Player spawns (buat saving)
+        self.player_spawns: dict[str, Position] = {}
+
+        # Pastiin trainers list ada utk tiap map
+        for key in self.maps.keys():
+            self.enemy_trainers.setdefault(key, [])
+
     @property
     def current_map(self) -> Map:
         return self.maps[self.current_map_key]
-        
+
     @property
     def current_enemy_trainers(self) -> list[EnemyTrainer]:
         return self.enemy_trainers[self.current_map_key]
-        
+
     @property
     def current_teleporter(self) -> list[Teleport]:
         return self.maps[self.current_map_key].teleporters
-    
+
     def switch_map(self, target: str) -> None:
         if target not in self.maps:
             Logger.warning(f"Map '{target}' not loaded; cannot switch.")
@@ -61,27 +71,27 @@ class GameManager:
         
         self.next_map = target
         self.should_change_scene = True
-        self.previous_map_key = self.current_map_key # Simpen map sebelumnya
-            
+        self.previous_map_key = self.current_map_key # Simpen map pas teleport [TO DO HACKATHON 6]
+
     def try_switch_map(self) -> None:
         if self.should_change_scene:
             self.current_map_key = self.next_map
             self.next_map = ""
             self.should_change_scene = False
             
-            # Ini ngeset player position ke spawn point
+            # biar teleport ga ke spawn terus [TO DO HACKATHON 6]
             #if self.player:
             #    self.player.position = self.maps[self.current_map_key].spawn
-            
+
     def check_collision(self, rect: pg.Rect) -> bool:
-        if self.maps[self.current_map_key].check_collision(rect):
+        if self.current_map.check_collision(rect):
             return True
-        for entity in self.enemy_trainers[self.current_map_key]:
+        for entity in self.current_enemy_trainers:
             if rect.colliderect(entity.animation.rect):
                 return True
-        
+
         return False
-        
+    
     def save(self, path: str) -> None:
         try:
             with open(path, "w") as f:
@@ -89,7 +99,7 @@ class GameManager:
             Logger.info(f"Game saved to {path}")
         except Exception as e:
             Logger.warning(f"Failed to save game: {e}")
-             
+
     @classmethod
     def load(cls, path: str) -> "GameManager | None":
         if not os.path.exists(path):
@@ -100,22 +110,34 @@ class GameManager:
             data = json.load(f)
         return cls.from_dict(data)
 
+    # checkpoint 2
     def to_dict(self) -> dict[str, object]:
         map_blocks: list[dict[str, object]] = []
         for key, m in self.maps.items():
             block = m.to_dict()
+            block["path"] = key
+
+            # Save trainers for this map
             block["enemy_trainers"] = [t.to_dict() for t in self.enemy_trainers.get(key, [])]
             spawn = self.player_spawns.get(key)
-            block["player"] = {
-                "x": spawn["x"] / GameSettings.TILE_SIZE,
-                "y": spawn["y"] / GameSettings.TILE_SIZE
-            }
+            if spawn: # Simpen posisi spawn player di map ini, dicek pake if biar ga error
+                block["player"] = {
+                    "x": spawn.x / GameSettings.TILE_SIZE,
+                    "y": spawn.y / GameSettings.TILE_SIZE
+                }
+            else:
+                block["player"] = {"x": 0, "y": 0}
+
             map_blocks.append(block)
         return {
             "map": map_blocks,
             "current_map": self.current_map_key,
-            "player": self.player.to_dict() if self.player is not None else None,
+            "player": self.player.to_dict() if self.player else None,
             "bag": self.bag.to_dict(),
+            "audio": {
+                "volume": GameSettings.AUDIO_VOLUME,
+                "mute": GameSettings.MUTE
+            }
         }
 
     @classmethod
@@ -124,14 +146,13 @@ class GameManager:
         from src.entities.player import Player
         from src.entities.enemy_trainer import EnemyTrainer
         from src.data.bag import Bag
-        
-        Logger.info("Loading maps")
-        maps_data = data["map"]
-        maps: dict[str, Map] = {}
-        player_spawns: dict[str, Position] = {}
-        trainers: dict[str, list[EnemyTrainer]] = {}
 
-        for entry in maps_data:
+        Logger.info("Loading maps")
+        maps: dict[str, Map] = {}
+        trainers: dict[str, list[EnemyTrainer]] = {}
+        player_spawns: dict[str, Position] = {}
+
+        for entry in data["map"]:
             path = entry["path"]
             maps[path] = Map.from_dict(entry)
             sp = entry.get("player")
@@ -140,26 +161,42 @@ class GameManager:
                     sp["x"] * GameSettings.TILE_SIZE,
                     sp["y"] * GameSettings.TILE_SIZE
                 )
+
         current_map = data["current_map"]
-        gm = cls(
-            maps, current_map,
+        gm = cls( # bikin game manager yg kosong
+            maps,
+            current_map,
             None, # Player
             trainers,
             bag=None
         )
-        gm.current_map_key = current_map
-        
+        gm.player_spawns = player_spawns
+
         Logger.info("Loading enemy trainers")
         for m in data["map"]:
-            raw_data = m["enemy_trainers"]
+            raw_data = m.get("enemy_trainers", [])
             gm.enemy_trainers[m["path"]] = [EnemyTrainer.from_dict(t, gm) for t in raw_data]
-        
+
+        # Pastiin semua maps punya trainer list (benerin KeyError)
+        for key in gm.maps.keys():
+            gm.enemy_trainers.setdefault(key, [])
+
         Logger.info("Loading Player")
         if data.get("player"):
             gm.player = Player.from_dict(data["player"], gm)
-        
+
         Logger.info("Loading bag")
         from src.data.bag import Bag as _Bag
         gm.bag = Bag.from_dict(data.get("bag", {})) if data.get("bag") else _Bag([], [])
+        # opsi bag
+        #if data.get("bag"):
+        #    gm.bag = Bag.from_dict(data["bag"])
+        #else:
+        #    gm.bag = Bag([], [])
+
+        # Load audio
+        audio = data.get("audio", {})
+        GameSettings.AUDIO_VOLUME = audio.get("volume", 0.5)
+        GameSettings.MUTE = audio.get("mute", False)
 
         return gm

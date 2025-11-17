@@ -78,6 +78,30 @@ class GameScene(Scene):
         )
         self.overlay.add_child(self.button_x)
 
+        # Save Button
+        self.button_save = Button(
+            img_path="UI/button_save.png",
+            img_hovered_path="UI/button_save_hover.png",
+            x=(GameSettings.SCREEN_WIDTH // 2 - 190),
+            y=(GameSettings.SCREEN_HEIGHT // 2 + 20),
+            width=100,
+            height=40,
+            on_click=self.save_game
+        )
+        self.overlay.add_child(self.button_save)
+
+        # Load Button
+        self.button_load = Button(
+            img_path="UI/button_load.png",
+            img_hovered_path="UI/button_load_hover.png",
+            x=(GameSettings.SCREEN_WIDTH // 2 + 50),
+            y=(GameSettings.SCREEN_HEIGHT // 2 + 20),
+            width=100,
+            height=40,
+            on_click=self.load_game
+        )
+        self.overlay.add_child(self.button_load)
+
         # Checkbox for mute
         self.checkbox_mute = Checkbox(
             x=(GameSettings.SCREEN_WIDTH // 2 - 190),
@@ -112,7 +136,7 @@ class GameScene(Scene):
         
     @override
     def update(self, dt: float):
-        # Check if there is assigned next scene
+        # Cek ada next scene ga
         self.game_manager.try_switch_map()
 
         # Update button menu
@@ -129,7 +153,7 @@ class GameScene(Scene):
             
             return # biar player ga bisa gerak di belakang overlay
 
-        # Update player and other data
+        # Update player dan enemy
         if self.game_manager.player:
             self.game_manager.player.update(dt)
         for enemy in self.game_manager.current_enemy_trainers:
@@ -144,14 +168,13 @@ class GameScene(Scene):
                 self.game_manager.player.position.y,
                 self.game_manager.current_map.path_name
             )
-
     
     # buka tutup overlay
     def open_overlay(self):
         self.show_overlay = True
         self.overlay.show()
         
-        # Sync overlay UI to current global settings
+        # Sync overlay UI dari global settings
         self.slider_volume.value = GameSettings.AUDIO_VOLUME
         self.checkbox_mute.checked = GameSettings.MUTE
 
@@ -159,7 +182,7 @@ class GameScene(Scene):
         self.show_overlay = False
         self.overlay.hide()
 
-        # Sync overlay UI to current global settings
+        # Sync overlay UI dari global settings
         self.slider_volume.value = GameSettings.AUDIO_VOLUME
         self.checkbox_mute.checked = GameSettings.MUTE
         
@@ -210,3 +233,39 @@ class GameScene(Scene):
             vol_text = minecraft_font.render(f"Volume: {int(self.slider_volume.get_value() * 100)}%", False, (0, 0, 0))
             screen.blit(vol_text, (GameSettings.SCREEN_WIDTH // 2 - 190,
                                 GameSettings.SCREEN_HEIGHT // 2 - 110))
+
+    def save_game(self):
+        # Save game state
+        self.game_manager.save("saves/game0.json")
+        
+        # Save global settings kaya volume/mute
+        settings_data = {
+            "volume": GameSettings.AUDIO_VOLUME,
+            "mute": GameSettings.MUTE
+        }
+        with open("saves/settings.json", "w") as f:
+            import json
+            json.dump(settings_data, f, indent=2)
+        
+        Logger.info("Game and settings saved!")
+
+    def load_game(self):
+        # Load game state
+        manager = GameManager.load("saves/game0.json")
+        if manager:
+            self.game_manager = manager
+            Logger.info("Game loaded successfully!")
+        
+        # Load global settings
+        import json, os
+        settings_path = "saves/settings.json"
+        if os.path.exists(settings_path):
+            with open(settings_path, "r") as f:
+                settings_data = json.load(f)
+            GameSettings.AUDIO_VOLUME = settings_data.get("volume", 0.5)
+            GameSettings.MUTE = settings_data.get("mute", False)
+            sound_manager.apply_settings()
+            # Update overlay UI sliders/checkbox
+            self.slider_volume.value = GameSettings.AUDIO_VOLUME
+            self.checkbox_mute.checked = GameSettings.MUTE
+            Logger.info("Settings loaded successfully!")

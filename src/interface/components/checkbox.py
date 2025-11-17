@@ -1,3 +1,5 @@
+# checkpoint 2
+
 import pygame as pg
 from typing import Optional
 from src.core.services import input_manager
@@ -13,7 +15,7 @@ class Checkbox:
         self.label = label
         self.font = pg.font.Font('assets/fonts/Minecraft.ttf', 20)
 
-        # Load images
+        # Load gambar
         self.img_off = pg.image.load("assets/images/UI/raw/UI_Flat_ToggleOff01a.png").convert_alpha()
         self.img_on  = pg.image.load("assets/images/UI/raw/UI_Flat_ToggleOn01a.png").convert_alpha()
 

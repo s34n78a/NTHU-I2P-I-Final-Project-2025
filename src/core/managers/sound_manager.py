@@ -33,7 +33,7 @@ class SoundManager:
         pg.mixer.stop()
         self.current_bgm = None
 
-    def apply_settings(self):
+    def apply_settings(self): # checkpoint 2
         #Logger.info(f"apply_settings: volume={GameSettings.AUDIO_VOLUME}, mute={GameSettings.MUTE}")
         
         # Apply volume

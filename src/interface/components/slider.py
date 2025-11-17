@@ -1,3 +1,5 @@
+# checkpoint 2
+
 import pygame as pg
 
 class Slider:
@@ -5,7 +7,7 @@ class Slider:
         self.x = x
         self.y = y
         self.width = width
-        self.value = value  # 0.0 to 1.0
+        self.value = value  # 0.0 sampai 1.0
         self.dragging = False
 
         self.bar_rect = pg.Rect(x, y, width, 6)
@@ -15,15 +17,15 @@ class Slider:
         mouse = pg.mouse.get_pos()
         click = pg.mouse.get_pressed()[0]
 
-        # Start dragging
+        # Mulai drag
         if self.knob_rect.collidepoint(mouse) and click:
             self.dragging = True
 
-        # Stop dragging
+        # Berhenti drag
         if not click:
             self.dragging = False
 
-        # Drag update
+        # Update saat drag
         if self.dragging:
             rel_x = mouse[0] - self.x
             rel_x = max(0, min(self.width, rel_x))
