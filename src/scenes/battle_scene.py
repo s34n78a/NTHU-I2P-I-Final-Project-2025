@@ -20,9 +20,12 @@ pokemon_font = pg.font.Font('assets/fonts/Pokemon Solid.ttf', 20) # text size 20
 
 # enemy bakal milih random pokemon dari daftar ini
 ENEMY_MONSTER_POOL = [
-    {"name": "Zubat", "hp": 40, "max_hp": 40, "level": 5, "sprite_path": "menu_sprites/menusprite1.png"},
-    {"name": "Geodude", "hp": 60, "max_hp": 60, "level": 8, "sprite_path": "menu_sprites/menusprite2.png"},
-    {"name": "Pidgey", "hp": 50, "max_hp": 50, "level": 6, "sprite_path": "menu_sprites/menusprite3.png"},
+    {"name": "Pikachu", "hp": 40, "max_hp": 40, "level": 5, "sprite_path": "menu_sprites/menusprite1.png"},
+    {"name": "Charizard", "hp": 60, "max_hp": 60, "level": 8, "sprite_path": "menu_sprites/menusprite2.png"},
+    {"name": "Blastoise", "hp": 50, "max_hp": 50, "level": 6, "sprite_path": "menu_sprites/menusprite3.png"},
+    {"name": "Venusaur",  "hp": 30,  "max_hp": 30, "level": 4, "sprite_path": "menu_sprites/menusprite4.png" },
+    {"name": "Gengar",    "hp": 35, "max_hp": 35, "level": 7, "sprite_path": "menu_sprites/menusprite5.png" },
+    {"name": "Dragonite", "hp": 60, "max_hp": 60, "level": 9, "sprite_path": "menu_sprites/menusprite6.png" }
 ]
 
 class BattleScene(Scene):
@@ -47,9 +50,6 @@ class BattleScene(Scene):
         self.player_monster = None
         self.enemy_monster = None
 
-        # text di button
-        self.btn_run_text = "Run"
-
         # buttons
         btn_w, btn_h = 150, 50
         y = 600
@@ -73,9 +73,17 @@ class BattleScene(Scene):
         self.btn_catch = Button(
             img_path="UI/raw/UI_Flat_Button01a_4.png",
             img_hovered_path="UI/raw/UI_Flat_Button01a_1.png",
-            x=500, y=y,
+            x=300, y=y,
             width=btn_w, height=btn_h,
             on_click=self.on_catch
+        )
+
+        self.btn_switch = Button(
+            img_path="UI/raw/UI_Flat_Button01a_4.png",
+            img_hovered_path="UI/raw/UI_Flat_Button01a_1.png",
+            x=500, y=y,
+            width=btn_w, height=btn_h,
+            on_click=self.on_switch
         )
 
         self.already_catch = False
@@ -186,6 +194,12 @@ class BattleScene(Scene):
     def on_catch(self):
         if self.turn != "win" and self.already_catch:
             return
+        
+        # check kalau bag udh ada 6 monsters
+        if len(self.game_manager.bag.monsters) >= 6:
+            Logger.info("[BATTLE] Cannot catch — party is full (6 monsters)")
+            self.txt = "You can't catch more! Your party is full."
+            return
 
         # cek jumlah pokeball
         if not self.game_manager.bag.use_item("Pokeball"):
@@ -193,17 +207,37 @@ class BattleScene(Scene):
             self.txt = "No Pokeballs left!"
             return
 
-        # clone enemy monster and restore HP
+        # clone enemy monster terus restore HP
         caught = self.enemy_monster.copy()
         caught["hp"] = caught["max_hp"]
 
         # add to bag
         self.game_manager.bag.monsters.append(caught)
 
-
         Logger.info(f"[BATTLE] Player caught {self.enemy_monster['name']}!")
         self.txt = f"You caught {caught['name']}!"
         self.already_catch = True
+
+    def on_switch(self):
+        if self.turn != "player":
+            return  # bukan giliran player
+
+        # cari monster hidup berikutnya
+        current_index = self.game_manager.bag.monsters.index(self.player_monster)
+        next_index = (current_index + 1) % len(self.game_manager.bag.monsters)
+        searched = 0
+        while searched < len(self.game_manager.bag.monsters):
+            candidate = self.game_manager.bag.monsters[next_index]
+            if candidate['hp'] > 0:
+                self.player_monster = candidate
+                Logger.info(f"[BATTLE] Player switched to {self.player_monster['name']}")
+                self.txt = f"You switched to {self.player_monster['name']}."
+                return
+            next_index = (next_index + 1) % len(self.game_manager.bag.monsters)
+            searched += 1
+
+        Logger.info("[BATTLE] No other alive monsters to switch to!")
+        self.txt = "No other alive monsters to switch to!"
 
     def enemy_attack_logic(self):
         dmg = 8 # damage tetap 8 biar simpel, lebih kecil biar gampang menang
@@ -231,6 +265,7 @@ class BattleScene(Scene):
         if self.turn == "player":
             self.btn_run.update(dt)
             self.btn_attack.update(dt)
+            self.btn_switch.update(dt)
 
         if self.turn in ["win", "lose", "no monsters"]:
             self.btn_run.update(dt)  # pake tombol run buat keluar
@@ -299,6 +334,10 @@ class BattleScene(Scene):
             self.btn_attack.draw(screen)
             atk_label = minecraft_font.render("Attack", True, (0, 0, 0))
             screen.blit(atk_label, atk_label.get_rect(center=self.btn_attack.hitbox.center))
+
+            self.btn_switch.draw(screen)
+            switch_label = minecraft_font.render("Switch", True, (0, 0, 0))
+            screen.blit(switch_label, switch_label.get_rect(center=self.btn_switch.hitbox.center))
 
         # print text, termasuk WIN/LOSE screens
         screen.blit(text_font.render(self.txt, True, (0, 0, 0)), (self.txt_x, self.txt_y))

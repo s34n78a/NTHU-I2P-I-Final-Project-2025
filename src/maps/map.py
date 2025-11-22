@@ -40,6 +40,9 @@ class Map:
         if GameSettings.DRAW_HITBOXES:
             for rect in self._collision_map:
                 pg.draw.rect(screen, (255, 0, 0), camera.transform_rect(rect), 1)
+                
+            for rect in self._bush_tiles: # checkpoint 2
+                pg.draw.rect(screen, (0, 255, 0), camera.transform_rect(rect), 1)
         
     def check_collision(self, rect: pg.Rect) -> bool:
         '''

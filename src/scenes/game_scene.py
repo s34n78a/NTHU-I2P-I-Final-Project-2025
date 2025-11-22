@@ -44,8 +44,8 @@ class GameScene(Scene):
             self.online_manager = None
         self.sprite_online = Sprite("ingame_ui/options1.png", (GameSettings.TILE_SIZE, GameSettings.TILE_SIZE))
         
-        # Menu Button buat buka overlay (Checkpoint 2 To do 01)
-        w, h = 560, 450
+        # Menu Button buat buka overlay (Checkpoint 2)
+        w, h = 570, 490
         x = (GameSettings.SCREEN_WIDTH - w) // 2
         y = (GameSettings.SCREEN_HEIGHT - h) // 2
 
@@ -299,7 +299,7 @@ class GameScene(Scene):
 
             # judul backpack
             title_text = title_font.render("Backpack", False, (0, 0, 0))
-            title_rect = title_text.get_rect(center=(GameSettings.SCREEN_WIDTH // 2 - 160, GameSettings.SCREEN_HEIGHT // 2 - 165))
+            title_rect = title_text.get_rect(center=(GameSettings.SCREEN_WIDTH // 2 - 160, GameSettings.SCREEN_HEIGHT // 2 - 170))
             screen.blit(title_text, title_rect)
 
             # gambar list monster
@@ -396,6 +396,9 @@ class GameScene(Scene):
             hint = in_bag_font.render("(no monsters)", False, (100, 100, 100))
             screen.blit(hint, (x, y))
             return
+        
+        # load mini banner once
+        mini_banner = self._load_cached_sprite("UI/raw/UI_Flat_Banner03a.png", (240, 50))
 
         for m in monsters:
             if isinstance(m, dict): # takutnya bukan dict
@@ -410,13 +413,23 @@ class GameScene(Scene):
                 level = getattr(m, "level", "?")
                 hp = getattr(m, "hp", "?")
                 max_hp = getattr(m, "max_hp", "?")
-
+            
+            # gambar mini banner di belakang
+            if mini_banner:
+                screen.blit(mini_banner, (x, y))
+            
             sprite = self._load_cached_sprite(sprite_path, (40, 40))
             if sprite:
-                screen.blit(sprite, (x, y))
+                screen.blit(sprite, (x+10, y))
 
-            text = in_bag_font.render(f"{name} Lv:{level} HP:{hp}/{max_hp}", False, (0, 0, 0))
-            screen.blit(text, (x + 60, y + 10))
+            # name + level
+            name_text = in_bag_font.render(f"{name}  Lv:{level}", False, (0, 0, 0))
+            screen.blit(name_text, (x + 60, y + 5))
+
+            # HP
+            hp_text = in_bag_font.render(f"HP: {hp}/{max_hp}", False, (0, 0, 0))
+            screen.blit(hp_text, (x + 60, y + 25))
+
             y += self.list_spacing
 
     def draw_item_list(self, screen):
