@@ -7,8 +7,13 @@
         { "x": 54, "y": 16, "classification": "stationary", "facing": "UP", "max_tiles": 2 },
         { "x": 31, "y": 31, "classification": "stationary", "facing": "UP", "max_tiles": 2 }
       ],
+      "shop_keepers": [
+        { "x": 19, "y": 29, "classification": "stationary", "facing": "LEFT", "max_tiles": 2 }
+      ],
       "teleport": [
-        { "x": 24, "y": 23, "destination": "gym.tmx" }
+        { "x": 24, "y": 23, "destination": "gym.tmx" },
+        {"x": 16, "y": 28, "destination": "home.tmx"
+        }
       ],
       "player": {
         "x": 16,
@@ -24,10 +29,24 @@
       ],
       "roaming_mobs": [],
       "enemy_trainers": [],
+      "shop_keepers": [],
       "player": {
         "x": 12,
         "y": 12
       }
+    },
+    {
+      "path": "home.tmx",
+      "teleport": [
+        {"x": 8, "y": 15, "destination": "map.tmx"},
+        {"x": 9, "y": 15, "destination": "map.tmx"}
+      ],
+      "player": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "enemy_trainers": [],
+      "shop_keepers": []
     }
   ],
   "current_map": "map.tmx",
@@ -45,8 +64,10 @@
       { "name": "Dragonite", "hp": 180, "max_hp": 220, "level": 40, "sprite_path": "menu_sprites/menusprite6.png" }
     ],
     "items": [
-      { "name": "Potion",      "count": 5,  "sprite_path": "ingame_ui/potion.png" },
       { "name": "Coins",       "count": 3,  "sprite_path": "ingame_ui/coin.png" },
+      { "name": "Health Potion",      "count": 5,  "sprite_path": "ingame_ui/potion.png" },
+      { "name": "Strength Potion",      "count": 5,  "sprite_path": "ingame_ui/potion.png" },
+      { "name": "Defense Potion",      "count": 5,  "sprite_path": "ingame_ui/potion.png" },
       { "name": "Pokeball",    "count": 10, "sprite_path": "ingame_ui/ball.png" }
     ]
   }

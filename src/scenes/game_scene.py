@@ -45,7 +45,7 @@ class GameScene(Scene):
         self.sprite_online = Sprite("ingame_ui/options1.png", (GameSettings.TILE_SIZE, GameSettings.TILE_SIZE))
         
         # Menu Button buat buka overlay (Checkpoint 2)
-        w, h = 570, 490
+        w, h = 570, 550
         x = (GameSettings.SCREEN_WIDTH - w) // 2
         y = (GameSettings.SCREEN_HEIGHT - h) // 2
 
@@ -61,10 +61,10 @@ class GameScene(Scene):
         self.setting_overlay = OverlayPanel(x, y, w, h, background_image=self.overlay_bg)
 
         # bikin overlay untuk backpack
-        self.backpack_overlay = OverlayPanel(x, y, w+20, h+20, background_image=self.overlay_bg)
+        self.backpack_overlay = OverlayPanel(x, y, w, h, background_image=self.overlay_bg)
 
         # bikin overlay untuk shop
-        self.shop_overlay = OverlayPanel(x, y, w+20, h+20, background_image=self.overlay_bg)
+        self.shop_overlay = OverlayPanel(x, y, w, h, background_image=self.overlay_bg)
 
         # Button buat buka overlay setting
         self.setting_button = Button(
@@ -145,6 +145,28 @@ class GameScene(Scene):
         )
         self.setting_overlay.add_child(self.button_load)
 
+        # sell button (checkpoint 3)
+        self.button_sell = Button(
+            img_path="UI/button_shop.png",
+            img_hovered_path="UI/button_shop_hover.png",
+            x=(GameSettings.SCREEN_WIDTH // 2 - 150),
+            y=(GameSettings.SCREEN_HEIGHT // 2 + 220),
+            width=45, height=45,
+            on_click=self.sell_selected_monster
+        )
+        self.shop_overlay.add_child(self.button_sell)
+
+        # buy button (checkpoint 3)
+        self.button_buy = Button(
+            img_path="UI/button_shop.png",
+            img_hovered_path="UI/button_shop_hover.png",
+            x=(GameSettings.SCREEN_WIDTH // 2 + 100),
+            y=(GameSettings.SCREEN_HEIGHT // 2 + 220),
+            width=45, height=45,
+            on_click=self.buy_selected_item
+        )
+        self.shop_overlay.add_child(self.button_buy)
+
         # Checkbox for mute
         self.checkbox_mute = Checkbox(
             x=(GameSettings.SCREEN_WIDTH // 2 - 190),
@@ -170,13 +192,14 @@ class GameScene(Scene):
 
         # Backpack list layout (buat ngegambar, 2 kolom)
         self.monster_column_x = 400
-        self.item_column_x = GameSettings.SCREEN_WIDTH // 2 + 60
+        self.item_column_x = GameSettings.SCREEN_WIDTH // 2 + 40
         self.list_top_y = 220
         self.list_spacing = 60
         self._sprite_cache = {}
 
-        # Simple sprite cache biar ga loading gambar tiap frame
-        #self._sprite_cache: dict[str, pg.Surface] = {}
+        # checkpoint 3
+        self.selected_monster_index = None
+        self.selected_item_index = None
 
     @override
     def enter(self) -> None:
@@ -481,6 +504,18 @@ class GameScene(Scene):
             hp_text = in_bag_font.render(f"HP: {hp}/{max_hp}", False, (0, 0, 0))
             screen.blit(hp_text, (x + 60, y + 25))
 
+            # checkpoint 3
+            # highlight selected monster
+            row_rect = pg.Rect(self.monster_column_x, y, 200, 50)
+            
+            if row_rect.collidepoint(pg.mouse.get_pos()):
+                highlight_surf = pg.Surface((200, 50), pg.SRCALPHA)
+                highlight_surf.fill((255, 255, 0, 50))  # yellow highlight with alpha
+                screen.blit(highlight_surf, (self.monster_column_x, y))
+                
+                if pg.mouse.get_pressed()[0]:  # left click
+                    self.selected_monster_index = monsters.index(m)
+
             y += self.list_spacing
 
     def draw_item_list(self, screen):
@@ -512,6 +547,95 @@ class GameScene(Scene):
             text = in_bag_font.render(f"{name} x{count}", False, (0, 0, 0))
             screen.blit(text, (x + 50, y + 10))
             y += self.list_spacing
+
+            # checkpoint 3
+            # highlight selected item
+            row_rect = pg.Rect(self.item_column_x, y - self.list_spacing, 200, 50)
+            
+            if row_rect.collidepoint(pg.mouse.get_pos()):
+                highlight_surf = pg.Surface((200, 50), pg.SRCALPHA)
+                highlight_surf.fill((255, 255, 0, 50))  # yellow highlight with alpha
+                screen.blit(highlight_surf, (self.item_column_x, y - self.list_spacing))
+                
+                if pg.mouse.get_pressed()[0]:  # left click
+                    self.selected_item_index = items.index(it)
+
+    # chekpoint 3
+    def sell_selected_monster(self):
+        monsters, _ = self._get_bag_lists()
+        idx = self.selected_monster_index
+
+        if idx is None or idx < 0 or idx >= len(monsters):
+            Logger.warning("No monster selected.")
+            return
+
+        monster = monsters[idx]
+
+        # Example sell value = level * 10 coins
+        level = monster["level"] if isinstance(monster, dict) else monster.level
+        coins_earned = level * 10
+
+        # Remove monster
+        if isinstance(self.game_manager.bag.monsters, list):
+            self.game_manager.bag.monsters.pop(idx)
+        else:
+            Logger.error("Bag monsters structure unexpected.")
+
+        # Add coins
+        self.game_manager.bag.add_item("Coins", coins_earned, "ingame_ui/coin.png")
+
+        Logger.info(f"Sold {monster['name']} for {coins_earned} coins!")
+
+        self.selected_monster_index = None
+
+    def buy_selected_item(self):
+        _, items = self._get_bag_lists()
+        idx = self.selected_item_index
+
+        if idx is None or idx < 0 or idx >= len(items):
+            Logger.info("No item selected.")
+            return
+        
+        item = items[idx]
+        item_name = item["name"] if isinstance(item, dict) else item.name
+        
+        if item_name == "Coins":
+            Logger.info("Cannot buy Coins!")
+            return
+
+        # Cari coins
+        coin_item = None
+        for it in items:
+            name = it["name"] if isinstance(it, dict) else it.name
+            if name == "Coins":
+                coin_item = it
+                break
+
+        if coin_item is None:
+            Logger.warning("You have no Coins!")
+            return
+
+        coins = coin_item["count"] if isinstance(coin_item, dict) else coin_item.count
+        cost = 20  # potion cost
+
+        if coins < cost:
+            Logger.warning("Not enough coins!")
+            return
+
+        # Kurangin coins
+        if isinstance(coin_item, dict):
+            coin_item["count"] -= cost
+        else:
+            coin_item.count -= cost
+
+        # Kasih item
+        if item_name[-6:] == "Potion":
+            sprite_path = "ingame_ui/potion.png"
+        else:
+            sprite_path = "ingame_ui/ball.png"
+        self.game_manager.bag.add_item(item_name, 1, sprite_path)
+
+        Logger.info("Bought 1 Potion for 20 coins!")
 
     def save_game(self):
         # Save game state

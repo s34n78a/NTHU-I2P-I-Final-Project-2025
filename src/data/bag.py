@@ -47,3 +47,17 @@ class Bag:
                 item["count"] -= 1
                 return True
         return False
+    
+    def add_item(self, name: str, count: int = 1, sprite_path: str | None = None):
+        # Look for existing item
+        for item in self._items_data:
+            if item["name"] == name:
+                item["count"] += count
+                return
+
+        # If not found, create new entry
+        self._items_data.append({
+            "name": name,
+            "count": count,
+            "sprite_path": "ingame_ui/potion.png" if sprite_path is None else sprite_path
+        })
